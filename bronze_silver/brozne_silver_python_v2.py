@@ -17,7 +17,7 @@ def create_snowpark_session():
     }
     return snowpark.Session.builder.configs(connection_parameters).create()
 
-def main(session: snowpark.Session, lookup_table, src_tables, database_name, schema_name, silver_schema_name):
+def main(session: snowpark.Session, lookup_table,src_tables,database_name,schema_name,silver_schema_name):
     exec_list = []
     try: 
         # Your code goes here, inside the "main" handler.
@@ -30,7 +30,8 @@ def main(session: snowpark.Session, lookup_table, src_tables, database_name, sch
         
         target_dfs_list = []
         for src_table in src_tables:
-            target_dfs_list.append(snow_df.filter(col("source_table") == src_table))
+            target_dfs_list.append(snow_df.filter(col("source_table") == schema_name.lower()  \
+                                                  + '.' + src_table.lower()))
             
         for table_df in target_dfs_list:
             dim_tables_df = table_df.select('target_table').distinct()
@@ -39,7 +40,8 @@ def main(session: snowpark.Session, lookup_table, src_tables, database_name, sch
                 dim_table = table_df.filter(col("target_table") == dim_table_df[0])
                 target_table = dim_table.select('target_table').distinct().collect()[0][0]
                 source_table = table_df.select('source_table').distinct().collect()[0][0]
-                col_names = tuple([col[0].strip().upper() for col in dim_table.select('column_name').collect()])
+                col_names = tuple([col[0].strip().upper() for col in \
+                                dim_table.select('TARGET_COLUMN').collect()])
                 
                 query = f"""
                 SELECT table_name, 
@@ -109,7 +111,8 @@ def main(session: snowpark.Session, lookup_table, src_tables, database_name, sch
 
 if __name__ == "__main__":
     lookup_table = "mj_lookup_new"
-    src_tables = ['mj_weather_info','mj_sales']
+    # src_tables = ['mj_weather_info','mj_sales']
+    src_tables = ['mj_sales']
     database_name = "DEMO_DB"
     schema_name = "BRONZE"
     silver_schema_name = "SILVER"
